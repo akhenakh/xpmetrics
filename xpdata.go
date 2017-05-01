@@ -167,9 +167,22 @@ func (d *XPData) Insert(didx uint8, fvals [8]float32) {
 
 // Position helper to get position
 func (d *XPData) Position() (ok bool, lat, lng, alt float32) {
+	d.RLock()
+	defer d.RUnlock()
 	v, ok := d.m[uint8(LatLonAltMsg)]
 	if !ok {
 		return false, 0, 0, 0
 	}
 	return true, v[0], v[1], v[2]
+}
+
+// Query return values stored for msg type, return false if no date have been received
+func (d *XPData) Query(msg XPMsg) (bool, [8]float32) {
+	d.RLock()
+	defer d.RUnlock()
+	v, ok := d.m[uint8(msg)]
+	if !ok {
+		return false, [8]float32{}
+	}
+	return true, v
 }

@@ -14,6 +14,7 @@ type Listener struct {
 	Debug bool
 	Data  *XPData
 	conn  *net.UDPConn
+	quit  chan bool
 }
 
 // NewListener create a new Listener
@@ -27,7 +28,11 @@ func NewListener(addr string) (*Listener, error) {
 		return nil, errors.Wrap(err, "creating a new listener")
 	}
 
-	return &Listener{conn: conn, Data: NewXPData()}, nil
+	return &Listener{
+		conn: conn,
+		Data: NewXPData(),
+		quit: make(chan bool),
+	}, nil
 }
 
 // Start processing of new messages
@@ -35,40 +40,45 @@ func (l *Listener) Start() {
 	buf := make([]byte, 65507)
 
 	for {
-		n, _, err := l.conn.ReadFromUDP(buf)
-		if err != nil {
-			log.Println("can't read dataframe", err)
+		select {
+		case <-l.quit:
 			return
-		}
-
-		// 5 prolog, 36 per message
-		if (n-5)%36 != 0 {
-			if l.Debug {
-				log.Println("invalid dataframe", buf)
-			}
-			continue
-		}
-
-		//  4 bytes of message indicates the index number
-		if bytes.Compare(buf[:4], []byte("DATA")) != 0 {
-			if l.Debug {
-				log.Println("invalid dataframe")
-			}
-			continue
-		}
-
-		for i := 0; i < (n-5)/36; i++ {
-			didx, fvals, err := l.ProcessMsg(buf[5+i*36 : 5+i*36+36])
+		default:
+			n, _, err := l.conn.ReadFromUDP(buf)
 			if err != nil {
-				log.Println("error processing msg", err)
-			}
-			if l.Debug {
-				var msgType XPMsg
-				msgType = XPMsg(didx)
-				log.Println("line", msgType, didx, fvals)
+				log.Println("can't read dataframe", err)
+				return
 			}
 
-			l.Data.Insert(didx, fvals)
+			// 5 prolog, 36 per message
+			if (n-5)%36 != 0 {
+				if l.Debug {
+					log.Println("invalid dataframe", buf)
+				}
+				continue
+			}
+
+			//  4 bytes of message indicates the index number
+			if bytes.Compare(buf[:4], []byte("DATA")) != 0 {
+				if l.Debug {
+					log.Println("invalid dataframe")
+				}
+				continue
+			}
+
+			for i := 0; i < (n-5)/36; i++ {
+				didx, fvals, err := l.ProcessMsg(buf[5+i*36 : 5+i*36+36])
+				if err != nil {
+					log.Println("error processing msg", err)
+				}
+				if l.Debug {
+					var msgType XPMsg
+					msgType = XPMsg(didx)
+					log.Println("line", msgType, didx, fvals)
+				}
+
+				l.Data.Insert(didx, fvals)
+			}
 		}
 	}
 }
@@ -102,7 +112,8 @@ func (l *Listener) ProcessMsg(b []byte) (uint8, [8]float32, error) {
 	return didx, fvals, nil
 }
 
-// Close the listener
-func (l *Listener) Close() error {
-	return l.Close()
+// Stop the listener
+func (l *Listener) Stop() error {
+	l.quit <- true
+	return l.conn.Close()
 }
