@@ -4,6 +4,7 @@ package xpmetrics
 
 import "sync"
 
+// XPMsg describes message type sent by XPlane
 type XPMsg uint8
 
 const (
@@ -176,13 +177,24 @@ func (d *XPData) Position() (ok bool, lat, lng, alt float32) {
 	return true, v[0], v[1], v[2]
 }
 
+// Compass helper to get magnetic compass
+func (d *XPData) Compass() (lat, lng, alt float32, ok bool) {
+	d.RLock()
+	defer d.RUnlock()
+	v, ok := d.m[uint8(LatLonAltMsg)]
+	if !ok {
+		return 0, 0, 0, false
+	}
+	return v[0], v[1], v[2], true
+}
+
 // Query return values stored for msg type, return false if no date have been received
-func (d *XPData) Query(msg XPMsg) (bool, [8]float32) {
+func (d *XPData) Query(msg XPMsg) ([8]float32, bool) {
 	d.RLock()
 	defer d.RUnlock()
 	v, ok := d.m[uint8(msg)]
 	if !ok {
-		return false, [8]float32{}
+		return [8]float32{}, false
 	}
-	return true, v
+	return v, true
 }
