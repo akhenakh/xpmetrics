@@ -18,3 +18,7 @@ Or use some helper functions
 ```
 hdg, ok := l.Data.Compass()
 ```
+
+To activate UDP Data Output in X-Plane go to the settings | Data Output tabs | Check a line as Network via UDP.  
+
+On the same page on the right check send network data output and set the IP Address and Port of the listener.
