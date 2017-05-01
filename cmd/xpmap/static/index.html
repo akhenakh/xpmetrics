@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+	
+	<title>XPlane position</title>
+
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.0.3/dist/leaflet.css" integrity="sha512-07I2e+7D8p6he1SIM+1twR5TIrhUQn9+I6yjqD53JQjFiMf8EtC93ty0/5vJTZGF8aAocvHYNEDJajGdNx1IsQ==" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.0.3/dist/leaflet.js" integrity="sha512-A7vV8IFfih/D732iSSKi20u/ooOfj/AGehOKq0f4vLT1Zr2Y+RX7C+w8A1gaSasGtRUZpF/NZgzSAu4/Gc41Lg==" crossorigin=""></script>
+
+</head>
+<body>
+
+
+<div id="mapid" style="height: 900px;"></div>
+<script>
+
+	var mymap = L.map('mapid').setView([46.8, -71], 10);
+
+	L.tileLayer('https://api.mapbox.com/styles/v1/akhenakh/cj26h0svf00192snzmo74wwaf/tiles/256/{z}/{x}/{y}?access_token=pk.eyJ1IjoiYWtoZW5ha2giLCJhIjoiQUxKN0VMTSJ9.96ZmVlPwh8XI2h43tOSbAw', {
+		maxZoom: 18,
+		attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, ' +
+			'<a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, ' +
+			'Imagery © <a href="http://mapbox.com">Mapbox</a>',
+		id: 'mapbox.streets'
+	}).addTo(mymap);
+
+	var marker = undefined;
+	if (typeof (EventSource) !== "undefined") {
+		console.log("starting sse");
+		var client = new EventSource("/events?stream=positions");
+
+		client.onmessage = function (event) {
+			var msg = JSON.parse(event.data);
+			console.log(msg);
+			var latlng = L.latLng(msg.Latitude, msg.Longitude);
+			if (marker == undefined) {
+				 marker = L.marker([msg.Latitude, msg.Longitude]).addTo(mymap);
+			} else {
+				
+				marker.setLatLng(latlng);
+			}
+			mymap.panTo(latlng);
+		}
+		client.onerror = function () {
+			console.log("error sse");
+		}
+	} else {
+		 alert("your browser doesn't support SSE");
+	}
+</script>
+
+</body>
+</html>

@@ -12,9 +12,17 @@ import (
 // Listener listen for incoming X-Plane packets
 type Listener struct {
 	Debug bool
-	Data  *XPData
-	conn  *net.UDPConn
-	quit  chan bool
+
+	// Data stores the values
+	// It can be read on demand, or you can use Notify
+	// to be called on new values
+	Data *XPData
+	conn *net.UDPConn
+	quit chan bool
+
+	// Notify a function called on every new update
+	// Empty per default
+	Notify func(XPMsg, [8]float32)
 }
 
 // NewListener create a new Listener
@@ -71,13 +79,13 @@ func (l *Listener) Start() {
 				if err != nil {
 					log.Println("error processing msg", err)
 				}
+				var msgType XPMsg
+				msgType = XPMsg(didx)
 				if l.Debug {
-					var msgType XPMsg
-					msgType = XPMsg(didx)
 					log.Println("line", msgType, didx, fvals)
 				}
-
 				l.Data.Insert(didx, fvals)
+				l.Notify(msgType, fvals)
 			}
 		}
 	}
