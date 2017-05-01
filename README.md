@@ -2,7 +2,7 @@
 
 Library to read X-Plane metrics sent over UDP.
 
-Instantiate a `NewListener` in its own goroutine
+Instantiate a `NewListener` and run `Start()` in its own goroutine
 ```
 l, err := xpmetrics.NewListener("127.0.0.1:49012")
 go l.Start()
